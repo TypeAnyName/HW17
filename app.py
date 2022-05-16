@@ -68,14 +68,23 @@ genre_ns = api.namespace("genres")
 @movie_ns.route('/')
 class MoviesView(Resource):
     def get(self):
-        all_movies = Movie.query.all()
-        return MoviesSchema(many=True).dump(all_movies), 200
+        director_id = request.args.get('director_id')
+        genre_id = request.args.get('genre_id')
+
+        movies = Movie.query
+
+        if director_id:
+            movies = movies.filter(Movie.director_id == director_id)
+        elif genre_id:
+            movies = movies.filter(Movie.genre_id == genre_id)
+        movies = movies.all()
+        return MoviesSchema(many=True).dump(movies), 200
 
     def post(self):
         req_json = request.json
         new_movie = Movie(**req_json)
-        with db.session.begin():
-            db.session.add(new_movie)
+        db.session.add(new_movie)
+        db.session.commit()
         return "", 201
 
 
@@ -98,17 +107,103 @@ class MovieView(Resource):
             movie.rating = req_json.get("rating")
             movie.genre_id = req_json.get("genre_id")
             movie.director_id = req_json.get("director_id")
-            with db.session.begin():
-                db.session.add(movie)
+            db.session.add(movie)
+            db.session.commit()
             return "", 204
         else:
             return '', 404
 
-    def delete(self,mid: int):
+    def delete(self, mid: int):
         movie = Movie.query.get(mid)
         if len(MoviesSchema().dump(movie)) > 0:
-            with db.session.begin():
-                db.session.delete(movie)
+            db.session.delete(movie)
+            db.session.commit()
+            return "", 204
+        else:
+            return '', 404
+
+
+@director_ns.route("/")
+class DirectorsView(Resource):
+    def get(self):
+        return DirectorsSchema(many=True).dump(Director.query.all()), 200
+
+    def post(self):
+        req_json = request.json
+        new_director = Director(**req_json)
+        db.session.add(new_director)
+        db.session.commit()
+        return "", 201
+
+
+@director_ns.route("/<int:did>")
+class DirectorView(Resource):
+    def get(self, did: int):
+        director = Director.query.get(did)
+        if len(DirectorsSchema().dump(director)) > 0:
+            return DirectorsSchema().dump(director), 200
+        else:
+            return '', 404
+
+    def put(self, did: int):
+        director = Director.query.get(did)
+        if len(DirectorsSchema().dump(director)) > 0:
+            req_json = request.json
+            director.name = req_json.get("name")
+            db.session.add(director)
+            db.session.commit()
+            return "", 204
+        else:
+            return '', 404
+
+    def delete(self, did: int):
+        director = Director.query.get(did)
+        if len(DirectorsSchema().dump(director)) > 0:
+            db.session.delete(director)
+            db.session.commit()
+            return "", 204
+        else:
+            return '', 404
+
+
+@genre_ns.route('/')
+class GenresView(Resource):
+    def get(self):
+        return GenresSchema(many=True).dump(Genre.query.all()), 200
+
+    def post(self):
+        req_json = request.json
+        new_genre = Genre(**req_json)
+        db.session.add(new_genre)
+        db.session.commit()
+        return "", 201
+
+
+@genre_ns.route("/<int:gid>")
+class GenreView(Resource):
+    def get(self, gid: int):
+        genre = Genre.query.get(gid)
+        if len(GenresSchema().dump(genre)) > 0:
+            return GenresSchema().dump(genre), 200
+        else:
+            return '', 404
+
+    def put(self, gid: int):
+        genre = Genre.query.get(gid)
+        if len(GenresSchema().dump(genre)) > 0:
+            req_json = request.json
+            genre.name = req_json.get("name")
+            db.session.add(genre)
+            db.session.commit()
+            return "", 204
+        else:
+            return '', 404
+
+    def delete(self, gid: int):
+        genre = Genre.query.get(gid)
+        if len(GenresSchema().dump(genre)) > 0:
+            db.session.delete(genre)
+            db.session.commit()
             return "", 204
         else:
             return '', 404
